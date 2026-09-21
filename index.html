@@ -144,6 +144,15 @@
   </div>
 
   <div class="card">
+    <h2>电机临时验证（0x30）</h2>
+    <p class="hint">
+      先让头部点头，再让底部自检。可反复点击；上一轮还没结束时再按，会在本轮结束后再执行一轮。
+      自检最长约 120 秒。页面上的成功只表示设备已收下命令。
+    </p>
+    <button id="btnMotorVerify" class="btn btn-scene" disabled>头部点头 + 底部自检</button>
+  </div>
+
+  <div class="card">
     <h2>情绪上报（0x61 type=2）</h2>
     <div class="emo-box">最近情绪：<strong id="emoLabel">—</strong>
       <span class="hint" style="display:inline;margin:0;">（收到后自动回 0x62）</span>
@@ -412,6 +421,18 @@
     setStatus(false, null);
   }
 
+  /** 设备侧 aibox stop 可能先断链；轮询兜底，避免 UI 卡在「已连接」 */
+  setInterval(() => {
+    if (!device) return;
+    try {
+      if (device.gatt && !device.gatt.connected &&
+          document.getElementById('statusBadge').classList.contains('on')) {
+        log('WARN', 'link lost (poll), sync UI');
+        onDisconnected();
+      }
+    } catch (_) {}
+  }, 1000);
+
   async function connect() {
     if (!navigator.bluetooth) {
       log('ERROR', 'navigator.bluetooth unavailable');
@@ -494,6 +515,7 @@
 
   function init() {
     buildSceneButtons();
+    document.getElementById('btnMotorVerify').addEventListener('click', () => sendScene(0x30));
     document.getElementById('btnConnect').addEventListener('click', connect);
     document.getElementById('btnDisconnect').addEventListener('click', disconnect);
     document.getElementById('btnClearLog').addEventListener('click', () => {
